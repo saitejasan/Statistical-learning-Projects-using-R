@@ -1,0 +1,289 @@
+---
+title: "Project2"
+date: "2023-04-29"
+output: html_document
+---
+
+```{r}
+library("ggplot2")
+library("forecast")
+library("prophet")
+library("lubridate")
+```
+#### **1.	You will be using a data set accessed via the link https://www.kaggle.com/competitions/store-sales-time-series-forecasting/data  . The data is contained in the oil.csv file.**
+
+```{r}
+my_data <- read.csv("D:/Semester/Spring2023/SDM2/Project/Project 2/oil.csv")
+```
+
+```{r}
+colnames(my_data)
+```
+
+```{r}
+dim(my_data)
+```
+
+```{r}
+head(my_data, 10)
+```
+
+```{r}
+sum(is.na(my_data))
+```
+
+#### **2.Plot the time series as is**
+##### In the time series plot the x-axis typically represents the time, and the y-axis typically represents the value of the variable. So, converting the date column to date type
+##### Convert date column to date format
+```{r}
+my_data$date <- as.Date(my_data$date)
+```
+
+##### Create a time series plot
+```{r}
+ggplot(my_data, aes(x = date, y = dcoilwtico)) +
+  geom_line(color = "orange") +
+  labs(title = "Crude Oil Prices",
+       x = "Date",
+       y = "Price (USD/barrel)") +
+  theme(plot.title = element_text(hjust = 0.5))
+
+```
+##### The price of a barrel of oil has been on a downward trend for several years. The peak price was reached between 2013 and 2014, and the price has been falling ever since. The price fell sharply in early 2016, but it has since recovered somewhat
+
+#### **3.Read the literature and find out how to fill the missing data. Impute the data using your preferred method.**
+
+##### There are multiple ways to fill in the missing data.
+##### **Mean filling**
+##### This method replaces missing values with the mean of the non-missing values. This is a simple and easy method to implement, but it can be biased if the data is not normally distributed.
+
+##### **Median filling**
+##### This method replaces missing values with the median of the non-missing values. This method is less biased than mean imputation, but it can be less efficient.
+##### **Mode filling**
+##### This method replaces missing values with the mode of the non-missing values. This method is the least biased, but it can be inefficient.
+##### **KNN filling**
+##### This method replaces missing values with the values of the k nearest neighbors. This method is more efficient than the other methods, but it can be more biased.
+
+##### For our problem, we are using <mark >mean filling</mark> to impute the missing data
+##### Steps performed:
+##### 1.	Finding the means for our variables
+##### 2.	Filling the date column with nulls with mean_date
+##### 3.	Filling the dcoilwtico column with nulls with mean_price
+
+##### Finding the means for our variables
+```{r}
+mean_date <- mean(my_data$date, na.rm = TRUE)
+mean_price <- mean(my_data$dcoilwtico, na.rm = TRUE)
+```
+
+##### filling the date column with nulls with mean_date
+```{r}
+my_data$date[is.na(my_data$date)] <- mean_date
+```
+
+##### filling the dcoilwtico column with nulls with mean_price
+```{r}
+my_data$dcoilwtico[is.na(my_data$dcoilwtico)] <- mean_price
+```
+
+##### checking if any nulls are present
+```{r}
+sum(is.na(my_data))
+```
+
+#### **4. Plot the time series with imputed data. Do you see a trend and/or seasonality in the data?**
+```{r}
+ggplot(my_data, aes(x = date, y = dcoilwtico)) +
+  geom_line(color = "orange") +
+  labs(title = "Crude Oil Prices",
+       x = "Date",
+       y = "Price (USD/barrel)") +
+  theme(plot.title = element_text(hjust = 0.5))
+
+```
+```{r}
+temp <-my_data
+```
+
+##### Overall, the time series curve shows a general upward trend, but there are some sharp drops in sales in 2015 and 2017. The reasons for these drops are not clear, but they could be due to several factors, such as a change in the product's price, a change in the product's marketing, or a change in the economy.
+
+##### **Checking at month level for seasonality**
+##### Extract month from date variable
+```{r}
+temp$month <- month(temp$date, label = TRUE)
+```
+
+##### Plot with month-level seasonality
+```{r}
+ggplot(temp, aes(x = month, y = dcoilwtico, group = 1)) +
+  geom_line(color = "orange") +
+  labs(title = "Crude Oil Prices",
+       x = "Month",
+       y = "Price (USD/barrel)") +
+  theme(plot.title = element_text(hjust = 0.5))
+```
+
+##### The data does not exhibit any seasonal patterns. There are both upward and downward trends in the months, with no clear pattern. 
+
+#### **5. Learn about the ETS models and about Holt-Winters models (provide all relevant specifics with respect to theoretical aspects and running them). This will expand your toolkit of the candidate models.**
+
+##### **ETS models**
+##### ETS models are a type of exponential smoothing model that can be used to forecast time series data with trend and seasonality. The acronym ETS stands for "Error, Trend, Seasonality." The error component of an ETS model represents the random variation in the data. The trend component represents the long-term direction of the data. The seasonality component represents the regular fluctuations in the data that occur over a fixed period.
+##### There are three different types of ETS models:
+##### •	Additive ETS models use additive errors, trends, and seasonality. This means that the errors, trends, and seasonality are added together to create the forecast.
+##### •	Multiplicative ETS models use multiplicative errors, trends, and seasonality. This means that the errors, trends, and seasonality are multiplied together to create the forecast.
+##### •	Damped ETS models are a type of ETS model that uses a dampened trend. This means that the trend is gradually reduced over time.
+
+##### **Holt-Winters models**
+##### Holt-Winters models are a type of exponential smoothing model that can be used to forecast time series data with trend and seasonality. The acronym Holt-Winters stands for "Holt" and "Winters," who were the two scientists who developed the method.
+##### Holt-Winters models are more complex than ETS models, but they can provide more accurate forecasts. There are three different types of Holt-Winters models:
+##### •	Simple exponential smoothing is a type of Holt-Winters model that only uses an error component.
+##### •	Double exponential smoothing is a type of Holt-Winters model that uses an error and trend component.
+##### •	Triple exponential smoothing is a type of Holt-Winters model that uses an error, trend, and seasonality component.
+
+
+##### **Running ETS and Holt-Winters models**
+##### ETS and Holt-Winters models can be run in a variety of software packages, including R, Python, and Excel. The specific steps involved in running the models will vary depending on the software package that is being used.
+
+
+##### **ETS Model**
+##### Fit an ETS model to the data
+```{r}
+ts_data <- ts(my_data$dcoilwtico, frequency = 365)
+ets_model <- ets(ts_data)
+```
+
+##### Print the summary of the ETS model
+```{r}
+summary(ets_model)
+```
+
+##### Forecast using the ETS model
+```{r}
+ets_forecast <- forecast(ets_model, h = 12)
+```
+
+##### Print the forecasted values
+```{r}
+plot(ets_forecast, main = "ETS Forecast for dcoilwtico")
+```
+##### Residuals for ETS model
+```{r}
+checkresiduals(ets_model)
+```
+##### **Holt-Winters Model**
+##### Fit a Holt-Winters model to the data
+
+```{r}
+ts_data <- ts(my_data$dcoilwtico, frequency = 7)
+hw_model <- hw(ts_data, seasonal = "additive")
+```
+
+##### Print the summary of the Holt-Winters model
+```{r}
+summary(hw_model)
+```
+
+##### Forecast using the Holt-Winters model
+```{r}
+hw_forecast <- forecast(hw_model, h = 7)
+```
+
+##### Print the forecasted values
+```{r}
+plot(hw_forecast, main = "HW Forecast for dcoilwtico")
+```
+
+##### Residuals for Holt-Winters model
+```{r}
+checkresiduals(hw_model)
+```
+
+##### **Advantages of ETS and Holt-Winters models**
+##### ETS and Holt-Winters models are relatively simple to understand and implement. They can be used to forecast a wide variety of time series data. ETS and Holt-Winters models are also relatively accurate.
+##### **Disadvantages of ETS and Holt-Winters models**
+##### ETS and Holt-Winters models can be sensitive to outliers. They can also be computationally expensive for large datasets.
+
+##### Overall, ETS and Holt-Winters models are a powerful tool for forecasting time series data. They are relatively simple to understand and implement, and they can be used to forecast a wide variety of time series data.
+
+#### **6.	Based on your answer to the question 4, suggest suitable model(s) for the data.**
+##### **ARIMA**
+##### This model is a more complex time series model that can capture a wide range of time series patterns, including trends, seasonality, and autoregressive and moving average components.
+##### **Prophet**
+##### This is a forecasting model developed by Facebook, which is designed to capture seasonal patterns and long-term trends. It is capable of handling missing values and can incorporate external variables, which may be useful for predicting crude oil prices.
+
+
+#### **7.	Run the models and check their adequacy**
+##### **ARIMA model**
+##### Fit ARIMA model
+```{r}
+arima_model <- auto.arima(ts_data, seasonal=FALSE)
+```
+
+##### Summary of ARIMA model
+```{r}
+summary(arima_model)
+```
+
+##### Forecast with ARIMA model
+```{r}
+arima_forecast <- forecast(arima_model)
+```
+
+##### Evaluate performance of ARIMA model
+```{r}
+accuracy(arima_forecast)
+```
+
+##### Plot actual vs forecasted values for ARIMA model
+```{r}
+plot(arima_forecast, main = "ARIMA Forecast for dcoilwtico")
+```
+
+##### **Prophet model**
+##### Convert data to Prophet-compatible format
+```{r}
+prophet_data <- data.frame(ds = my_data$date, y = my_data$dcoilwtico)
+```
+
+##### Fit Prophet model
+```{r}
+model <- prophet(prophet_data)
+```
+
+##### Cross-validation
+```{r}
+horizon <- 90 # number of days to forecast
+cv <- prophet::cross_validation(model, horizon = horizon, initial = 365, period = 180, units = "days")
+```
+
+##### Compute performance metrics
+```{r}
+rmse <- sqrt(mean((cv$yhat - cv$y)^2))
+print(rmse)
+mape <- mean(abs((cv$y - cv$yhat)/cv$y))
+print(mape)
+mae <- mean(abs(cv$y - cv$yhat))
+print(mae)
+```
+
+##### Make predictions with the fitted model
+```{r}
+future_dates <- make_future_dataframe(model, periods = 365)
+forecast <- predict(model, future_dates)
+```
+
+##### Plot the forecast
+```{r}
+plot(model, forecast)
+```
+
+#### **8.8.	Compare the models’ performance by the metrics that you think are relevant. Try to identify a model with a low RMSE.**
+
+```{r,fig.align='center'}
+knitr::include_graphics("C:/Users/tejad/Desktop/performance.png")
+```
+
+##### Based on the RMSE, MAE, and MAPE values, the ETS model is the best model. It has the lowest RMSE and MAE values, and it is also the closest to the actual value in terms of MAPE. The Holt-Winters model is a close second, but it has a slightly higher RMSE and MAE values. The ARIMA model is the worst model, with the highest RMSE and MAE values. The Prophet model is also not very good, with a very high MAPE value.
+
+##### In conclusion, based on the RMSE, MAE, and MAPE values provided, the ETS, Holt-Winters, and ARIMA models appear to be the best choices for this particular dataset. However, further analysis and comparison of these models, along with consideration of other factors, would be necessary to make a more definitive conclusion.
